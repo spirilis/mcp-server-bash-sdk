@@ -219,4 +219,8 @@ For AI assistants and local tool execution, these aren't blocking issues.
 
 ---
 
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 **The complete code is available at: https://github.com/muthuishere/mcp-server-bash-sdk**
