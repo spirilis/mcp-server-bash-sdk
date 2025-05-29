@@ -1,163 +1,52 @@
-# 🐚 Building an MCP Server in Shell (Yes, Bash)
+# 🐚 MCP Server in Bash
 
-> Lightweight. Portable. Zero-overhead. Good enough.
+A lightweight, zero-overhead implementation of the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server in pure Bash. 
 
----
-
-## 💭 The Problem
-
-I wanted to build an **MCP server** — a component that talks JSON-RPC over stdio, following the [Model Context Protocol (MCP)](https://modelcontextprotocol.io). But I didn't want the overhead of Node.js, Python, or any heavy runtime.
-
-Most MCP servers are just API wrappers with schema conversion. So why add runtime overhead when a lightweight shell script could do the job?
+**Why?** Most MCP servers are just API wrappers with schema conversion. This implementation provides a zero-overhead alternative to Node.js, Python, or other heavy runtimes.
 
 ---
 
-## 📡 What's Actually Happening Under the Hood?
+## 📋 Features
 
-### JSON-RPC: Simple Remote Procedure Calls
+* ✅ Full JSON-RPC 2.0 protocol over stdio
+* ✅ Complete MCP protocol implementation
+* ✅ Dynamic tool discovery via function naming convention
+* ✅ External configuration via JSON files
+* ✅ Easy to extend with custom tools
 
-JSON-RPC is just a lightweight protocol for remote procedure calls using JSON. It has minimal structure:
+---
 
-```json
-// Request
-{
-  "jsonrpc": "2.0",  // Version
-  "method": "get_movies",  // Function to call
-  "params": {},  // Arguments
-  "id": 1  // Request identifier
-}
+## 🔧 Requirements
 
-// Response
-{
-  "jsonrpc": "2.0",
-  "result": { "movies": [...] },  // Result data
-  "id": 1  // Same ID as request
-}
-```
+- Bash shell
+- `jq` for JSON processing (`brew install jq` on macOS)
 
-**Why use JSON-RPC?** It's minimal, language-agnostic, and works over any transport (HTTP, WebSocket, or in our case, stdio).  (also blockchain uses it, its after rpc era and before grpc era )
+---
 
-### stdio vs Traditional CLI
+## 🚀 Quick Start
 
-Traditional CLI tools are one-shot: they parse arguments, execute, and exit:
+1. **Clone the repo**
 
 ```bash
-$ tool-name --get-movies
-[movie data]
+git clone https://github.com/muthuishere/mcp-server-bash-sdk
+cd mcp-server-bash-sdk
 ```
 
-But with **stdio-based communication**, the process stays alive, reading from stdin and writing to stdout in a continuous loop:
-
-```
-[client] → stdin → [our MCP server] → stdout → [client]
-```
-
-This approach enables:
-- **Stateful conversations**: The server process stays alive between requests
-- **Structured communication**: Full JSON objects, not just command arguments
-- **Bidirectional dialogue**: Continuous reading/writing vs one-shot execution
-- **Perfect for MCP**: AI tools need to dynamically invoke different functions
-
----
-
-## 🧩 How It Works: The Shell-Based MCP Stack
-
-### 1. JSON Parsing with `jq`
-
-Shell isn't great at JSON, but `jq` is. We use it for:
+2. **Make scripts executable**
 
 ```bash
-# Extract method name from request
-method=$(echo "$input" | jq -r '.method')
-
-# Create response
-echo "{\"result\": $result}" | jq -c '.'
+chmod +x mcpserver_core.sh moviemcpserver.sh
 ```
 
-### 2. stdio Loop
-
-The core of our MCP server is just a stdin reader:
+3. **Try it out**
 
 ```bash
-# Continuously read from stdin line by line
-while IFS= read -r line; do
-  # Process the JSON-RPC request
-  response=$(process_request "$line")
-  
-  # Write response to stdout
-  echo "$response"
-done
+echo '{"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "get_movies"}, "id": 1}' | ./moviemcpserver.sh
 ```
 
-### 3. Function Dispatch System
-
-We map RPC methods to Bash functions dynamically:
-
-```bash
-# Dynamic dispatch to tool_* functions
-if type "tool_${tool_name}" &>/dev/null; then
-  content=$(tool_${tool_name} "$arguments")
-else
-  # Error: tool not found
-fi
-```
-
-### 4. Modular Design
-
-- **mcpserver_core.sh**: JSON-RPC + MCP protocol handling
-- **moviemcpserver.sh**: Just business logic functions
-- **Configuration**: External JSON files for tools and server config
-
 ---
 
-## 🔧 Why Shell Makes Sense Here
-
-1. **Zero Runtime Overhead**
-   - No interpreter startup (Python)
-   - No VM warmup (Node.js, JVM)
-   - No dependency resolution
-
-2. **Perfect for Local Tool Execution**
-   - Most MCP servers nowadays just call APIs anyway
-   - The bottleneck is network calls, not local processing
-   - Low-latency startup time is crucial
-
-3. **Simplicity & Transparency**
-   - Self-contained (~200 lines)
-   - Easy to inspect and debug
-   - No "magic" frameworks
-
-4. **No external server**
-   - It talks stdio directly to MCP hosts like Github Copilot agent (I have tested only there)
-
----
-
-## 📦 What This MCP Server Handles
-
-* ✅ Full JSON-RPC 2.0 protocol
-* ✅ MCP required methods:
-  - `initialize`: Server setup and capability exchange
-  - `tools/list`: Advertises available tools
-  - `tools/call`: Executes tool with arguments
-  - `notifications/initialized`: Confirmation handling
-* ✅ Dynamic tool loading via Bash functions
-* ✅ Error handling and logging
-* ✅ Configuration via JSON files
-
----
-
-## 🚫 Limitations
-
-* ❌ No concurrency/parallel processing
-* ❌ Limited memory management
-* ❌ No streaming responses
-* ❌ Not designed for high throughput
-
-But for AI assistants and local tool execution, these aren't blockers.
-
----
-
-## 🛠 The Architecture
+## 🏗️ Architecture
 
 ```
 ┌─────────────┐         ┌────────────────────────┐
@@ -179,49 +68,44 @@ But for AI assistants and local tool execution, these aren't blockers.
               └─────────────────┘  └───────────────┘
 ```
 
+- **mcpserver_core.sh**: Handles JSON-RPC and MCP protocol
+- **moviemcpserver.sh**: Contains business logic functions
+- **assets/**: JSON configuration files
+
 ---
 
-## 🔌 How to Create Your Own MCP Server
+## 🔌 Creating Your Own MCP Server
 
-Creating your own MCP server with this framework is incredibly simple. You just need to focus on your business logic while `mcpserver_core.sh` handles all the complex protocol details.
-
-### 1. Create Your Business Logic Script
-
-Create a new file (e.g., `weatherserver.sh`) with your tool implementations:
+1. **Create your business logic file (e.g., `weatherserver.sh`)**
 
 ```bash
 #!/bin/bash
-# Weather API MCP server implementation
+# Weather API implementation
 
-# Source the core MCP server implementation
+# Source the core MCP server
 source "$(dirname "${BASH_SOURCE[0]}")/mcpserver_core.sh"
 
-# Environment variables passed from MCP host
-API_KEY="${MCP_API_KEY:-default_key}"  # Use MCP_API_KEY or default
-UNITS="${MCP_UNITS:-metric}"           # Use MCP_UNITS or "metric"
+# Access environment variables
+API_KEY="${MCP_API_KEY:-default_key}"
 
-# Get current weather for a location
+# Weather tool implementation
 tool_get_weather() {
   local args="$1"
   local location=$(echo "$args" | jq -r '.location')
   
-  # Call external weather API
-  local weather=$(curl -s "https://api.example.com/weather?location=$location&units=$UNITS&apikey=$API_KEY")
-  
-  # Return the result
+  # Call external API
+  local weather=$(curl -s "https://api.example.com/weather?location=$location&apikey=$API_KEY")
   echo "$weather"
   return 0
 }
 
-# Get weather forecast for multiple days
+# Forecast tool implementation
 tool_get_forecast() {
   local args="$1"
   local location=$(echo "$args" | jq -r '.location')
   local days=$(echo "$args" | jq -r '.days')
   
-  # Call external forecast API
-  local forecast=$(curl -s "https://api.example.com/forecast?location=$location&days=$days&units=$UNITS&apikey=$API_KEY")
-  
+  local forecast=$(curl -s "https://api.example.com/forecast?location=$location&days=$days&apikey=$API_KEY")
   echo "$forecast"
   return 0
 }
@@ -230,14 +114,7 @@ tool_get_forecast() {
 run_mcp_server "$@"
 ```
 
-Make it executable:
-```bash
-chmod +x weatherserver.sh
-```
-
-### 2. Create Your `tools_list.json`
-
-In the `assets` directory, create or update `tools_list.json`:
+2. **Create `tools_list.json` in the assets directory**
 
 ```json
 {
@@ -278,9 +155,7 @@ In the `assets` directory, create or update `tools_list.json`:
 }
 ```
 
-### 3. Update Your `mcpserverconfig.json`
-
-Customize the server configuration:
+3. **Update `mcpserverconfig.json`**
 
 ```json
 {
@@ -294,59 +169,54 @@ Customize the server configuration:
       "listChanged": true
     }
   },
-  "instructions": "This server provides weather information and forecasts. You can get current weather or multi-day forecasts for any location."
+  "instructions": "This server provides weather information and forecasts."
 }
 ```
 
-### 4. That's It! No Protocol Details To Worry About
+4. **Make your file executable**
 
-The beauty of this design is that:
-- `mcpserver_core.sh` handles all JSON-RPC and MCP protocol requirements
-- Your script only needs to implement `tool_*` functions for your specific use case
-- Environment variables from the MCP host can be accessed directly
-- Tool discovery happens automatically by function naming convention
-
-This modular approach lets you focus entirely on your tools' functionality rather than protocol implementation details.
-
-## 🧠 Final Thought
-
-LLM tool building doesn't always need complex frameworks. Sometimes a 200-line shell script solves 90% of the problem.
-
-This project is my bet on simplicity — shell scripting still has its place in the AI era.
+```bash
+chmod +x weatherserver.sh
+```
 
 ---
 
-## 🔌 Using with VS Code & GitHub Copilot
+## 🖥️ Using with VS Code & GitHub Copilot
 
-Setting up your MCP server with GitHub Copilot is simple:
-
-1. **Add to VS Code settings.json**:
+1. **Update VS Code settings.json**
 
 ```jsonc
 "mcp": {
     "servers": {
-        "my-movie-server": {
+        "my-weather-server": {
             "type": "stdio",
-            "command": "/path/to/your/moviemcpserver.sh",
-            "args": []
+            "command": "/path/to/your/weatherserver.sh",
+            "args": [],
+            "env": {
+                "MCP_API_KEY": "your-api-key"
+            }
         }
     }
 }
 ```
 
-2. **Make it executable**:
-
-```bash
-chmod +x /path/to/your/moviemcpserver.sh
-```
-
-3. **Use with GitHub Copilot Chat**:
+2. **Use with GitHub Copilot Chat**
 
 ```
-/mcp my-movie-server get movies
+/mcp my-weather-server get weather for New York
 ```
 
-That's it! You're now using a lightweight MCP server with GitHub Copilot.
+---
+
+## 🚫 Limitations
+
+* No concurrency/parallel processing
+* Limited memory management
+* No streaming responses
+* Not designed for high throughput
+
+For AI assistants and local tool execution, these aren't blocking issues.
+
+---
 
 **The complete code is available at: https://github.com/muthuishere/mcp-server-bash-sdk**
-
