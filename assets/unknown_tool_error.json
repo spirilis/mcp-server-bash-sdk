@@ -1,0 +1,7 @@
+{
+    "isError": true,
+    "content": [{
+        "type": "text",
+        "text": "Unknown tool: TOOL_NAME"
+    }]
+}

@@ -1,0 +1,34 @@
+{
+    "tools": [
+        {
+            "name": "get_movies",
+            "description": "Get list of movies currently playing",
+            "inputSchema": {
+                "type": "object",
+                "properties": {}
+            }
+        },
+        {
+            "name": "book_ticket",
+            "description": "Book tickets for a movie",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "movieId": {
+                        "type": "integer",
+                        "description": "ID of the movie to book"
+                    },
+                    "showTime": {
+                        "type": "string",
+                        "description": "Show time to book (e.g., \"10:00\")"
+                    },
+                    "numTickets": {
+                        "type": "integer",
+                        "description": "Number of tickets to book"
+                    }
+                },
+                "required": ["movieId", "showTime", "numTickets"]
+            }
+        }
+    ]
+}
