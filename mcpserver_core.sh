@@ -45,7 +45,7 @@ handle_initialize() {
     local client_protocol_version=$(echo "$params" | jq -r '.protocolVersion')
     
     # Use the configuration from mcpserverconfig.json file
-    local config_file="$SCRIPT_DIR/mcpserverconfig.json"
+    local config_file="$SCRIPT_DIR/assets/mcpserverconfig.json"
     local result=$(read_json_file "$config_file")
     
     create_response "$id" "$result" ""

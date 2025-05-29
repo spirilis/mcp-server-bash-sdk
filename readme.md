@@ -181,60 +181,172 @@ But for AI assistants and local tool execution, these aren't blockers.
 
 ---
 
-## 🔌 How to Extend This
+## 🔌 How to Create Your Own MCP Server
 
-Extending this MCP server is remarkably simple:
+Creating your own MCP server with this framework is incredibly simple. You just need to focus on your business logic while `mcpserver_core.sh` handles all the complex protocol details.
 
-1. **Add a new tool function** in your business logic file (e.g., `moviemcpserver.sh`):
+### 1. Create Your Business Logic Script
 
-   ```bash
-   # Add a function with the tool_ prefix
-   tool_get_recommendations() {
-     local args="$1"
-     local genre=$(echo "$args" | jq -r '.genre')
-     
-     # Your implementation here
-     echo "[{\"title\": \"Inception\", \"genre\": \"$genre\"}]"
-     return 0
-   }
-   ```
+Create a new file (e.g., `weatherserver.sh`) with your tool implementations:
 
-2. **Update your `tools_list.json`** in the assets directory:
+```bash
+#!/bin/bash
+# Weather API MCP server implementation
 
-   ```json
-   {
-     "tools": [
-       {
-         "name": "get_recommendations",
-         "description": "Get movie recommendations by genre",
-         "parameters": {
-           "type": "object",
-           "properties": {
-             "genre": {
-               "type": "string",
-               "description": "Movie genre (e.g., action, comedy)"
-             }
-           },
-           "required": ["genre"]
-         }
-       },
-       // ...existing tools...
-     ]
-   }
-   ```
+# Source the core MCP server implementation
+source "$(dirname "${BASH_SOURCE[0]}")/mcpserver_core.sh"
 
-3. **That's it!** No need to modify the core MCP protocol handling.
+# Environment variables passed from MCP host
+API_KEY="${MCP_API_KEY:-default_key}"  # Use MCP_API_KEY or default
+UNITS="${MCP_UNITS:-metric}"           # Use MCP_UNITS or "metric"
 
-The modular design means:
-- The core protocol layer (`mcpserver_core.sh`) handles all the JSON-RPC mechanics
-- Your business logic file (`moviemcpserver.sh`) stays clean and focused
-- New tools are auto-discovered by the function naming convention (`tool_*`)
+# Get current weather for a location
+tool_get_weather() {
+  local args="$1"
+  local location=$(echo "$args" | jq -r '.location')
+  
+  # Call external weather API
+  local weather=$(curl -s "https://api.example.com/weather?location=$location&units=$UNITS&apikey=$API_KEY")
+  
+  # Return the result
+  echo "$weather"
+  return 0
+}
 
-This makes it perfect for quickly prototyping new AI tools without framework overhead.
+# Get weather forecast for multiple days
+tool_get_forecast() {
+  local args="$1"
+  local location=$(echo "$args" | jq -r '.location')
+  local days=$(echo "$args" | jq -r '.days')
+  
+  # Call external forecast API
+  local forecast=$(curl -s "https://api.example.com/forecast?location=$location&days=$days&units=$UNITS&apikey=$API_KEY")
+  
+  echo "$forecast"
+  return 0
+}
+
+# Start the MCP server
+run_mcp_server "$@"
+```
+
+Make it executable:
+```bash
+chmod +x weatherserver.sh
+```
+
+### 2. Create Your `tools_list.json`
+
+In the `assets` directory, create or update `tools_list.json`:
+
+```json
+{
+  "tools": [
+    {
+      "name": "get_weather",
+      "description": "Get current weather for a location",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name or coordinates"
+          }
+        },
+        "required": ["location"]
+      }
+    },
+    {
+      "name": "get_forecast",
+      "description": "Get weather forecast for multiple days",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name or coordinates"
+          },
+          "days": {
+            "type": "integer",
+            "description": "Number of days to forecast"
+          }
+        },
+        "required": ["location", "days"]
+      }
+    }
+  ]
+}
+```
+
+### 3. Update Your `mcpserverconfig.json`
+
+Customize the server configuration:
+
+```json
+{
+  "protocolVersion": "0.1.0",
+  "serverInfo": {
+    "name": "WeatherServer",
+    "version": "1.0.0"
+  },
+  "capabilities": {
+    "tools": {
+      "listChanged": true
+    }
+  },
+  "instructions": "This server provides weather information and forecasts. You can get current weather or multi-day forecasts for any location."
+}
+```
+
+### 4. That's It! No Protocol Details To Worry About
+
+The beauty of this design is that:
+- `mcpserver_core.sh` handles all JSON-RPC and MCP protocol requirements
+- Your script only needs to implement `tool_*` functions for your specific use case
+- Environment variables from the MCP host can be accessed directly
+- Tool discovery happens automatically by function naming convention
+
+This modular approach lets you focus entirely on your tools' functionality rather than protocol implementation details.
 
 ## 🧠 Final Thought
 
 LLM tool building doesn't always need complex frameworks. Sometimes a 200-line shell script solves 90% of the problem.
 
 This project is my bet on simplicity — shell scripting still has its place in the AI era.
+
+---
+
+## 🔌 Using with VS Code & GitHub Copilot
+
+Setting up your MCP server with GitHub Copilot is simple:
+
+1. **Add to VS Code settings.json**:
+
+```jsonc
+"mcp": {
+    "servers": {
+        "my-movie-server": {
+            "type": "stdio",
+            "command": "/path/to/your/moviemcpserver.sh",
+            "args": []
+        }
+    }
+}
+```
+
+2. **Make it executable**:
+
+```bash
+chmod +x /path/to/your/moviemcpserver.sh
+```
+
+3. **Use with GitHub Copilot Chat**:
+
+```
+/mcp my-movie-server get movies
+```
+
+That's it! You're now using a lightweight MCP server with GitHub Copilot.
+
+**The complete code is available at: https://github.com/muthuishere/mcp-server-bash-sdk**
 
