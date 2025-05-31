@@ -132,36 +132,6 @@ tool_get_weather() {
   return 0
 }
 
-# Tool: Get weather forecast for multiple days
-# Parameters: Takes a JSON object with location and days
-# Success: Echo JSON result and return 0
-# Error: Echo error message and return 1
-tool_get_forecast() {
-  local args="$1"
-  local location=$(echo "$args" | jq -r '.location')
-  local days=$(echo "$args" | jq -r '.days')
-  
-  # Parameter validation
-  if [[ -z "$location" ]]; then
-    echo "Missing required parameter: location"
-    return 1
-  fi
-  
-  if [[ -z "$days" ]]; then
-    echo "Missing required parameter: days"
-    return 1
-  fi
-  
-  if ! [[ "$days" =~ ^[0-9]+$ ]]; then
-    echo "Invalid days: must be a positive number"
-    return 1
-  fi
-  
-  # Call external API
-  local forecast=$(curl -s "https://api.example.com/forecast?location=$location&days=$days&apikey=$API_KEY")
-  echo "$forecast"
-  return 0
-}
 
 # Start the MCP server
 run_mcp_server "$@"
@@ -185,24 +155,6 @@ run_mcp_server "$@"
         },
         "required": ["location"]
       }
-    },
-    {
-      "name": "get_forecast",
-      "description": "Get weather forecast for multiple days",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "location": {
-            "type": "string",
-            "description": "City name or coordinates"
-          },
-          "days": {
-            "type": "integer",
-            "description": "Number of days to forecast"
-          }
-        },
-        "required": ["location", "days"]
-      }
     }
   ]
 }
@@ -222,7 +174,7 @@ run_mcp_server "$@"
       "listChanged": true
     }
   },
-  "instructions": "This server provides weather information and forecasts."
+  "instructions": "This server provides weather information."
 }
 ```
 
