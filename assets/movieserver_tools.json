@@ -12,7 +12,7 @@
         "type": "object",
         "properties": {
           "movieId": {
-            "type": "integer",
+            "type": "number",
             "description": "ID of the movie to book"
           },
           "showTime": {
@@ -20,11 +20,29 @@
             "description": "Show time (e.g., '14:30')"
           },
           "numTickets": {
-            "type": "integer",
+            "type": "number",
             "description": "Number of tickets to book"
           }
         },
         "required": ["movieId", "showTime", "numTickets"]
+      }
+    },
+    {
+      "name": "validate_age",
+      "description": "Validate user age for movie rating",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "age": {
+            "type": "number",
+            "description": "User's age"
+          },
+          "movieRating": {
+            "type": "string",
+            "description": "Movie rating (A, PG-13, U)"
+          }
+        },
+        "required": ["age", "movieRating"]
       }
     }
   ]

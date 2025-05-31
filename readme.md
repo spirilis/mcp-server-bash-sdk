@@ -76,22 +76,55 @@ echo '{"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "get_movies"
 
 ## 🔌 Creating Your Own MCP Server
 
+### Tool Function Guidelines
+
+When implementing tool functions for the MCP server, follow these guidelines:
+
+1. **Naming Convention**: All tool functions must be prefixed with `tool_` followed by the same name defined in tools_list.json
+2. **Parameters**: Each function should accept a single parameter `$1` containing JSON arguments
+3. **Success Pattern**: For successful operations, echo the result and return 0
+4. **Error Pattern**: For validation errors, echo an error message and return 1
+5. **Automatic Discovery**: All tool functions are automatically exposed to the MCP server based on tools_list.json
+
+### Implementation Steps
+
 1. **Create your business logic file (e.g., `weatherserver.sh`)**
 
 ```bash
 #!/bin/bash
 # Weather API implementation
 
-# Source the core MCP server
+# Override configuration paths BEFORE sourcing the core
+MCP_CONFIG_FILE="$(dirname "${BASH_SOURCE[0]}")/assets/weatherserver_config.json"
+MCP_TOOLS_LIST_FILE="$(dirname "${BASH_SOURCE[0]}")/assets/weatherserver_tools.json"
+MCP_LOG_FILE="$(dirname "${BASH_SOURCE[0]}")/logs/weatherserver.log"
+
+# MCP Server Tool Function Guidelines:
+# 1. Name all tool functions with prefix "tool_" followed by the same name defined in tools_list.json
+# 2. Function should accept a single parameter "$1" containing JSON arguments
+# 3. For successful operations: Echo the expected result and return 0
+# 4. For errors: Echo an error message and return 1
+# 5. All tool functions are automatically exposed to the MCP server based on tools_list.json
+
+# Source the core MCP server implementation
 source "$(dirname "${BASH_SOURCE[0]}")/mcpserver_core.sh"
 
 # Access environment variables
 API_KEY="${MCP_API_KEY:-default_key}"
 
-# Weather tool implementation
+# Tool: Get current weather for a location
+# Parameters: Takes a JSON object with location
+# Success: Echo JSON result and return 0
+# Error: Echo error message and return 1
 tool_get_weather() {
   local args="$1"
   local location=$(echo "$args" | jq -r '.location')
+  
+  # Parameter validation
+  if [[ -z "$location" ]]; then
+    echo "Missing required parameter: location"
+    return 1
+  fi
   
   # Call external API
   local weather=$(curl -s "https://api.example.com/weather?location=$location&apikey=$API_KEY")
@@ -99,12 +132,32 @@ tool_get_weather() {
   return 0
 }
 
-# Forecast tool implementation
+# Tool: Get weather forecast for multiple days
+# Parameters: Takes a JSON object with location and days
+# Success: Echo JSON result and return 0
+# Error: Echo error message and return 1
 tool_get_forecast() {
   local args="$1"
   local location=$(echo "$args" | jq -r '.location')
   local days=$(echo "$args" | jq -r '.days')
   
+  # Parameter validation
+  if [[ -z "$location" ]]; then
+    echo "Missing required parameter: location"
+    return 1
+  fi
+  
+  if [[ -z "$days" ]]; then
+    echo "Missing required parameter: days"
+    return 1
+  fi
+  
+  if ! [[ "$days" =~ ^[0-9]+$ ]]; then
+    echo "Invalid days: must be a positive number"
+    return 1
+  fi
+  
+  # Call external API
   local forecast=$(curl -s "https://api.example.com/forecast?location=$location&days=$days&apikey=$API_KEY")
   echo "$forecast"
   return 0
@@ -114,7 +167,7 @@ tool_get_forecast() {
 run_mcp_server "$@"
 ```
 
-2. **Create `tools_list.json` in the assets directory**
+2. **Create `assets/weatherserver_tools.json`**
 
 ```json
 {
@@ -155,7 +208,7 @@ run_mcp_server "$@"
 }
 ```
 
-3. **Update `mcpserverconfig.json`**
+3. **Create `assets/weatherserver_config.json`**
 
 ```json
 {
