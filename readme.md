@@ -145,7 +145,7 @@ run_mcp_server "$@"
     {
       "name": "get_weather",
       "description": "Get current weather for a location",
-      "parameters": {
+      "inputSchema": {
         "type": "object",
         "properties": {
           "location": {
@@ -164,7 +164,7 @@ run_mcp_server "$@"
 
 ```json
 {
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "2025-03-26",
   "serverInfo": {
     "name": "WeatherServer",
     "version": "1.0.0"

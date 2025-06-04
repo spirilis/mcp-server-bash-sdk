@@ -3,12 +3,16 @@
     {
       "name": "get_movies",
       "description": "Get a list of movies currently playing in theaters",
-      "parameters": {}
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
     },
     {
       "name": "book_ticket",
       "description": "Book movie tickets for a specific showing",
-      "parameters": {
+      "inputSchema": {
         "type": "object",
         "properties": {
           "movieId": {
@@ -30,7 +34,7 @@
     {
       "name": "validate_age",
       "description": "Validate user age for movie rating",
-      "parameters": {
+      "inputSchema": {
         "type": "object",
         "properties": {
           "age": {
