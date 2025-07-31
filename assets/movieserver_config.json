@@ -7,6 +7,9 @@
   "capabilities": {
     "tools": {
       "listChanged": true
+    },
+    "prompts": {
+      "listChanged": true
     }
   },
   "instructions": "This server provides movie information and ticket booking capabilities. You can list movies and book tickets."

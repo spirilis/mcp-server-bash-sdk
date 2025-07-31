@@ -8,6 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Configuration paths - overridable by implementations
 MCP_CONFIG_FILE="${MCP_CONFIG_FILE:-"$SCRIPT_DIR/assets/mcpserverconfig.json"}"
 MCP_TOOLS_LIST_FILE="${MCP_TOOLS_LIST_FILE:-"$SCRIPT_DIR/assets/tools_list.json"}"
+MCP_PROMPTS_LIST_FILE="${MCP_PROMPTS_LIST_FILE:-"$SCRIPT_DIR/assets/prompts_list.json"}"
 MCP_LOG_FILE="${MCP_LOG_FILE:-"$SCRIPT_DIR/mcpserver.log"}"
 
 # Function to log messages to file
@@ -120,6 +121,73 @@ handle_tools_call() {
     create_response "$id" "$result" ""
 }
 
+# Function to list available prompts
+handle_prompts_list() {
+    local id="$1"
+
+    # Read prompts list from JSON file
+    local result=$(read_json_file "$MCP_PROMPTS_LIST_FILE")
+    create_response "$id" "$result" ""
+}
+
+# Function to handle tool calls - delegates to tool implementations
+handle_prompts_call() {
+    local id="$1"
+    local params="$2"
+
+    local prompt_name=$(echo "$params" | jq -r '.name')
+    local arguments=$(echo "$params" | jq '.arguments // {}')
+    local result error content
+
+    # Log the prompt being called
+    log "INFO" "Prompt call: $prompt_name with arguments: $(echo "$arguments" | jq -c '.')"
+
+    # Validate prompt name format (alphanumeric and underscores only)
+    if ! [[ "$prompt_name" =~ ^[a-zA-Z0-9_]+$ ]]; then
+        create_error_response "$id" -32602 "Invalid prompt name format"
+        return
+    fi
+
+    # Call the function from the main script if it exists
+    if type "prompt_${prompt_name}" &>/dev/null; then
+        # Call the specific prompt function from main script
+        content=$(prompt_${prompt_name} "$arguments")
+
+        # Check if we got an error
+        if [[ $? -ne 0 ]]; then
+            # Simple error handling - use the content as error message if available
+            local error_message="Prompt execution error"
+            if [[ -n "$content" && "$content" != "null" ]]; then
+                # Use the prompt's output as the error message
+                error_message="$error_message : $content"
+            fi
+            log "ERROR" "Prompt $prompt_name execution failed: $error_message"
+            create_error_response "$id" -32603 "$error_message"
+            return
+        fi
+
+    else
+        # Read error template for unknown prompt
+        create_error_response "$id" -32602 "Prompt not found: $prompt_name"
+        return
+    fi
+
+    content=$(echo "$content" | tr '\n' ' ')
+    # Use jq to escape the string
+    stringified_content=$(echo "$content" | jq -R -s '.')
+
+    # Then build the response structure with the stringified content
+    result="{
+        \"content\": [{
+            \"type\": \"text\",
+            \"text\": $stringified_content
+        }]
+    }"
+
+    create_response "$id" "$result" ""
+}
+
+
 # ==== JSON-RPC 2.0 Handler ====
 
 # Function to create a JSON-RPC 2.0 response
@@ -221,6 +289,13 @@ process_request() {
         ;;
     "tools/call")
         handle_tools_call "$id" "$params"
+        ;;
+    "prompts/list")
+        handle_prompts_list "$id"
+        ;;
+    "prompts/get")
+        # Placeholder for prompts/get method
+        create_error_response "$id" -32601 "Method not implemented: $method"
         ;;
     *)
         create_error_response "$id" -32601 "Method not found: $method"
